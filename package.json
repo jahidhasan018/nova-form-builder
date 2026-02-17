@@ -1,0 +1,16 @@
+{
+  "name": "nova-form-builder",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "wp-scripts build assets/blocks/contact-form/src/index.js --output-path=assets/blocks/contact-form/build",
+    "start": "wp-scripts start assets/blocks/contact-form/src/index.js --output-path=assets/blocks/contact-form/build",
+    "test:js": "wp-scripts test-unit-js",
+    "lint:js": "wp-scripts lint-js"
+  },
+  "devDependencies": {
+    "@wordpress/scripts": "^30.0.0",
+    "eslint": "^8.57.0",
+    "prettier": "^3.3.3"
+  }
+}
