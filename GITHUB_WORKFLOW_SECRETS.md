@@ -42,6 +42,11 @@ Add each secret listed below.
 - SSH port.
 - Usually `22` unless you use a custom SSH port.
 
+
+### `DEPLOY_GITHUB_TOKEN` (optional, recommended)
+- GitHub Personal Access Token used for Composer/git fallback when dependencies are downloaded from GitHub and anonymous access is blocked/rate-limited.
+- Use a fine-grained token with read access to required repositories/packages.
+
 ### `HOSTINGER_PLUGIN_PATH`
 - Final plugin target directory under WordPress plugins.
 - Example:
@@ -96,3 +101,18 @@ The workflow checks these files for changes:
 If none changed, `npm ci` is skipped.
 
 Composer install still runs (`composer install --no-dev --optimize-autoloader`) so PHP dependencies are always prepared for deployment.
+
+## 7) Troubleshooting common workflow errors
+
+### Error: `Dependencies lock file is not found ...`
+- Cause: `actions/setup-node` cache mode was enabled without a lock file.
+- Fix in this repo: workflow now auto-detects lock files and disables cache when none exist.
+
+### Error: `could not read Username for https://github.com`
+- Cause: a dependency fetch attempted GitHub auth in a non-interactive runner.
+- Fix: add optional `DEPLOY_GITHUB_TOKEN` secret and workflow will configure Composer GitHub OAuth automatically.
+
+### Error: `expected flush after ref listing`
+- Usually appears during failed remote git fetch/auth handshake.
+- Most often resolved by ensuring valid auth token/SSH permissions and stable dependency source URLs.
+
