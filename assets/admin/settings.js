@@ -27,7 +27,7 @@
 	apiFetch.use( apiFetch.createRootURLMiddleware( window.NovaFormBuilderSettings.root.replace( '/nova-form/v1', '/' ) ) );
 
 	function App() {
-		var _useState = useState( { enable_webhook: false, webhook_url: '', enable_email_notifications: true, style_preset: 'classic', enable_honeypot: true, success_message: 'Thanks for submitting the form.', submit_button_label: 'Submit', store_submissions: true } ), state = _useState[0], setState = _useState[1];
+		var _useState = useState( defaultState ), state = _useState[0], setState = _useState[1];
 		var _useState2 = useState( '' ), msg = _useState2[0], setMsg = _useState2[1];
 		var _useState3 = useState( '' ), error = _useState3[0], setError = _useState3[1];
 
@@ -59,8 +59,8 @@
 			error ? el( Notice, { status: 'error', isDismissible: true, onRemove: function(){ setError( '' ); } }, error ) : null,
 			msg ? el( Notice, { status: 'success', isDismissible: true, onRemove: function(){ setMsg( '' ); } }, msg ) : null,
 			el( TabPanel, { className: 'nova-settings-tabs', tabs: [
-				{ name: 'general', title: 'General' },
 				{ name: 'form', title: 'Form Behavior' },
+				{ name: 'notifications', title: 'Notifications' },
 				{ name: 'integrations', title: 'Integrations' },
 				{ name: 'appearance', title: 'Appearance' }
 			] }, function ( tab ) {
@@ -108,30 +108,7 @@
 						} )
 					);
 				}
-				if ( tab.name === 'form' ) {
-					return el( 'div', null,
-						el( TextControl, {
-							label: 'Submit Button Label',
-							value: state.submit_button_label || 'Submit',
-							onChange: function (value){ setState( Object.assign( {}, state, { submit_button_label: value } ) ); }
-						} ),
-						el( TextControl, {
-							label: 'Success Message',
-							value: state.success_message || '',
-							onChange: function (value){ setState( Object.assign( {}, state, { success_message: value } ) ); }
-						} ),
-						el( ToggleControl, {
-							label: 'Enable Honeypot Spam Protection',
-							checked: !! state.enable_honeypot,
-							onChange: function (value){ setState( Object.assign( {}, state, { enable_honeypot: value } ) ); }
-						} ),
-						el( ToggleControl, {
-							label: 'Store Form Submissions',
-							checked: !! state.store_submissions,
-							onChange: function (value){ setState( Object.assign( {}, state, { store_submissions: value } ) ); }
-						} )
-					);
-				}
+
 				if ( tab.name === 'integrations' ) {
 					return el( 'div', { className: 'nova-settings-card' },
 						el( ToggleControl, {
