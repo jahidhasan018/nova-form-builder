@@ -13,7 +13,7 @@
 	apiFetch.use( apiFetch.createRootURLMiddleware( window.NovaFormBuilderSettings.root.replace( '/nova-form/v1', '/' ) ) );
 
 	function App() {
-		var _useState = useState( { enable_webhook: false, webhook_url: '', enable_email_notifications: true, style_preset: 'classic' } ), state = _useState[0], setState = _useState[1];
+		var _useState = useState( { enable_webhook: false, webhook_url: '', enable_email_notifications: true, style_preset: 'classic', enable_honeypot: true, success_message: 'Thanks for submitting the form.', submit_button_label: 'Submit', store_submissions: true } ), state = _useState[0], setState = _useState[1];
 		var _useState2 = useState( '' ), msg = _useState2[0], setMsg = _useState2[1];
 
 		useEffect( function () {
@@ -31,6 +31,7 @@
 		return el( 'div', null,
 			el( TabPanel, { className: 'nova-settings-tabs', tabs: [
 				{ name: 'general', title: 'General' },
+				{ name: 'form', title: 'Form Behavior' },
 				{ name: 'integrations', title: 'Integrations' },
 				{ name: 'styles', title: 'Styles' }
 			] }, function ( tab ) {
@@ -40,6 +41,30 @@
 							label: 'Enable Email Notifications',
 							checked: !! state.enable_email_notifications,
 							onChange: function (value){ setState( Object.assign( {}, state, { enable_email_notifications: value } ) ); }
+						} )
+					);
+				}
+				if ( tab.name === 'form' ) {
+					return el( 'div', null,
+						el( TextControl, {
+							label: 'Submit Button Label',
+							value: state.submit_button_label || 'Submit',
+							onChange: function (value){ setState( Object.assign( {}, state, { submit_button_label: value } ) ); }
+						} ),
+						el( TextControl, {
+							label: 'Success Message',
+							value: state.success_message || '',
+							onChange: function (value){ setState( Object.assign( {}, state, { success_message: value } ) ); }
+						} ),
+						el( ToggleControl, {
+							label: 'Enable Honeypot Spam Protection',
+							checked: !! state.enable_honeypot,
+							onChange: function (value){ setState( Object.assign( {}, state, { enable_honeypot: value } ) ); }
+						} ),
+						el( ToggleControl, {
+							label: 'Store Form Submissions',
+							checked: !! state.store_submissions,
+							onChange: function (value){ setState( Object.assign( {}, state, { store_submissions: value } ) ); }
 						} )
 					);
 				}
@@ -75,5 +100,8 @@
 		);
 	}
 
-	wp.element.render( el( App ), document.getElementById( 'nova-form-builder-settings-root' ) );
+	var root = document.getElementById( 'nova-form-builder-settings-root' );
+	if ( root ) {
+		wp.element.render( el( App ), root );
+	}
 } )( window.wp );
