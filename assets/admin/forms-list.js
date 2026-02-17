@@ -1,6 +1,7 @@
 ( function ( wp ) {
 	var el = wp.element.createElement;
 	var useEffect = wp.element.useEffect;
+	var useMemo = wp.element.useMemo;
 	var useState = wp.element.useState;
 	var Button = wp.components.Button;
 	var TextControl = wp.components.TextControl;
@@ -33,8 +34,34 @@
 		var _useState3 = useState( '' ), msg = _useState3[0], setMsg = _useState3[1];
 
 		function load() {
-			apiFetch( { path: '/nova-form/v1/forms' } ).then( function (res) {
-				setForms( ( res && res.data ) ? res.data : [] );
+			setLoading( true );
+			return apiFetch( { path: '/nova-form/v1/forms' } ).then( function (res) {
+				var data = ( res && res.data && Array.isArray( res.data ) ) ? res.data : [];
+				setForms( data );
+				setLoading( false );
+			} ).catch( function () {
+				setError( 'Unable to load forms.' );
+				setLoading( false );
+			} );
+		}
+
+		useEffect( function () {
+			load();
+		}, [] );
+
+		function resetBuilder() {
+			setSuccess( '' );
+			setError( '' );
+			setForm( emptyForm() );
+		}
+
+		function editForm( id ) {
+			setSuccess( '' );
+			setError( '' );
+			apiFetch( { path: '/nova-form/v1/forms/' + id } ).then( function (res) {
+				setForm( normalizeForm( res && res.data ) );
+			} ).catch( function () {
+				setError( 'Unable to load this form for editing.' );
 			} );
 		}
 
@@ -135,7 +162,8 @@
 								}, 'Delete' )
 							)
 						);
-					} )
+					} ),
+					el( Button, { variant: 'primary', onClick: saveForm, disabled: saving }, saving ? 'Saving...' : ( form.id ? 'Update Form' : 'Save Form' ) )
 				)
 			),
 			el( 'div', { className: 'nova-builder' },
