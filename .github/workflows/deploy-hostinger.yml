@@ -98,18 +98,7 @@ jobs:
             --exclude='phpcs.xml' \
             ./ dist/nova-form-builder/
 
-      - name: Upload plugin files to Hostinger server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.HOSTINGER_HOST }}
-          username: ${{ secrets.HOSTINGER_USER }}
-          key: ${{ secrets.HOSTINGER_SSH_KEY }}
-          port: ${{ secrets.HOSTINGER_PORT }}
-          source: dist/nova-form-builder/*
-          target: ${{ secrets.HOSTINGER_TEMP_PATH }}
-          strip_components: 2
-
-      - name: Deploy plugin into wp-content/plugins
+      - name: Prepare remote plugin directory
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.HOSTINGER_HOST }}
@@ -118,12 +107,18 @@ jobs:
           port: ${{ secrets.HOSTINGER_PORT }}
           script: |
             set -e
-            # Update these paths in repository secrets to match your environment.
-            TEMP_PATH="${{ secrets.HOSTINGER_TEMP_PATH }}"
             PLUGIN_PATH="${{ secrets.HOSTINGER_PLUGIN_PATH }}"
 
             mkdir -p "$PLUGIN_PATH"
-            rsync -av --delete "$TEMP_PATH"/ "$PLUGIN_PATH"/
+            find "$PLUGIN_PATH" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
 
-            # Optional: clean temp directory after successful deploy.
-            rm -rf "$TEMP_PATH"/*
+      - name: Upload plugin files to wp-content/plugins
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USER }}
+          key: ${{ secrets.HOSTINGER_SSH_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          source: dist/nova-form-builder/*
+          target: ${{ secrets.HOSTINGER_PLUGIN_PATH }}
+          strip_components: 2

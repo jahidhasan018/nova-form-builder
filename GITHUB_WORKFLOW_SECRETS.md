@@ -42,16 +42,14 @@ Add each secret listed below.
 - SSH port.
 - Usually `22` unless you use a custom SSH port.
 
-### `HOSTINGER_TEMP_PATH`
-- Temporary server directory used by upload step before final sync.
-- Example: `/home/username/deploy-temp/nova-form-builder`
-
 ### `HOSTINGER_PLUGIN_PATH`
 - Final plugin target directory under WordPress plugins.
 - Example:
   - `/home/username/public_html/wp-content/plugins/nova-form-builder`
 
 > This path should point to the plugin folder *inside* `wp-content/plugins`.
+
+> `HOSTINGER_TEMP_PATH` is no longer required. Deployment now uploads directly to your plugin folder after clearing existing files in that folder.
 
 ---
 
@@ -72,7 +70,7 @@ Before first deploy, verify:
 
 - SSH login works with the same key/user/host/port.
 - `HOSTINGER_PLUGIN_PATH` exists or can be created by SSH user.
-- SSH user has write permissions for temp and plugin directories.
+- SSH user has write permissions for the plugin directory.
 - WordPress plugin folder name matches your expected deployment target.
 
 ---
