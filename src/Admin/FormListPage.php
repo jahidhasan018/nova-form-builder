@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace NovaFormBuilder\Admin;
 
 class FormListPage {
-	private const SLUG = 'nova-form-builder-forms';
+	private const SLUG = 'nova-form-builder';
 
 	private string $plugin_url;
 
@@ -24,7 +24,15 @@ class FormListPage {
 	}
 
 	public function register_menu(): void {
-		add_submenu_page( 'nova-form-builder', __( 'Add Form', 'nova-form-builder' ), __( 'Add Form', 'nova-form-builder' ), 'manage_options', self::SLUG, array( $this, 'render' ) );
+		add_menu_page(
+			__( 'NovaForm Builder', 'nova-form-builder' ),
+			__( 'NovaForm Builder', 'nova-form-builder' ),
+			'manage_options',
+			self::SLUG,
+			array( $this, 'render' ),
+			'dashicons-feedback',
+			58
+		);
 	}
 
 	public function enqueue_assets( string $hook_suffix ): void {
@@ -33,13 +41,13 @@ class FormListPage {
 		}
 
 		wp_enqueue_script( 'nova-form-builder-forms-list', $this->plugin_url . 'assets/admin/forms-list.js', array( 'wp-element', 'wp-components', 'wp-api-fetch' ), '1.0.0', true );
+		wp_enqueue_style( 'nova-form-builder-admin', $this->plugin_url . 'assets/admin/form-builder.css', array(), '1.0.0' );
 		wp_add_inline_script(
 			'nova-form-builder-forms-list',
 			'window.NovaFormBuilderForms=' . wp_json_encode(
 				array(
-					'root'       => esc_url_raw( rest_url( 'nova-form/v1' ) ),
-					'nonce'      => wp_create_nonce( 'wp_rest' ),
-					'builderUrl' => admin_url( 'admin.php?page=nova-form-builder-builder' ),
+					'root'  => esc_url_raw( rest_url( 'nova-form/v1' ) ),
+					'nonce' => wp_create_nonce( 'wp_rest' ),
 				)
 			) . ';',
 			'before'
@@ -47,6 +55,6 @@ class FormListPage {
 	}
 
 	public function render(): void {
-		echo '<div class="wrap"><h1>' . esc_html__( 'Forms', 'nova-form-builder' ) . '</h1><div id="nova-form-builder-forms-root"></div></div>';
+		echo '<div class="wrap"><h1>' . esc_html__( 'Add Form', 'nova-form-builder' ) . '</h1><div id="nova-form-builder-forms-root"></div></div>';
 	}
 }

@@ -9,7 +9,6 @@ declare(strict_types=1);
 
 namespace NovaFormBuilder\Core;
 
-use NovaFormBuilder\Admin\FormBuilderPage;
 use NovaFormBuilder\Admin\FormListPage;
 use NovaFormBuilder\Admin\SettingsPage;
 use NovaFormBuilder\Blocks\ContactFormBlock;
@@ -61,7 +60,6 @@ class Application {
 		$this->container->set( 'form_embed_block', fn ( Container $c ): FormEmbedBlock => new FormEmbedBlock( $this->plugin_url(), $this->plugin_path(), $c->get( 'shortcode_service' ) ) );
 
 		$this->container->set( 'admin_settings_page', fn (): SettingsPage => new SettingsPage( $this->plugin_url() ) );
-		$this->container->set( 'admin_form_builder_page', fn (): FormBuilderPage => new FormBuilderPage( $this->plugin_url() ) );
 		$this->container->set( 'admin_form_list_page', fn (): FormListPage => new FormListPage( $this->plugin_url() ) );
 	}
 
@@ -84,7 +82,6 @@ class Application {
 
 		if ( is_admin() ) {
 			$this->container->get( 'admin_settings_page' )->register_hooks();
-			$this->container->get( 'admin_form_builder_page' )->register_hooks();
 			$this->container->get( 'admin_form_list_page' )->register_hooks();
 		}
 
