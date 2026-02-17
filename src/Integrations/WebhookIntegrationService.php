@@ -9,13 +9,19 @@ declare(strict_types=1);
 
 namespace NovaFormBuilder\Integrations;
 
+use NovaFormBuilder\Contracts\SettingsRepositoryInterface;
+
 class WebhookIntegrationService {
+	public function __construct( private SettingsRepositoryInterface $settings_repository ) {}
+
 	/**
 	 * @param array<string,mixed> $payload Payload.
 	 */
 	public function dispatch( array $payload ): void {
-		$endpoint = (string) get_option( 'nova_form_builder_webhook_url', '' );
-		if ( '' === $endpoint ) {
+		$is_enabled = (bool) $this->settings_repository->get( 'enable_webhook', false );
+		$endpoint   = (string) $this->settings_repository->get( 'webhook_url', '' );
+
+		if ( ! $is_enabled || '' === $endpoint ) {
 			return;
 		}
 

@@ -9,12 +9,13 @@ declare(strict_types=1);
 
 namespace NovaFormBuilder\Core;
 
+use NovaFormBuilder\Admin\SettingsPage;
 use NovaFormBuilder\Blocks\ContactFormBlock;
-use NovaFormBuilder\Contracts\ServiceProviderInterface;
 use NovaFormBuilder\Integrations\EmailIntegrationService;
 use NovaFormBuilder\Integrations\WebhookIntegrationService;
 use NovaFormBuilder\Repositories\MySqlSubmissionRepository;
 use NovaFormBuilder\Repositories\SubmissionRepositoryInterface;
+use NovaFormBuilder\Repositories\WordPressSettingsRepository;
 use NovaFormBuilder\REST\SubmissionController;
 use NovaFormBuilder\Services\FormValidator;
 
@@ -48,6 +49,11 @@ class Application {
 	 */
 	private function register_services(): void {
 		$this->container->set(
+			'settings_repository',
+			static fn (): WordPressSettingsRepository => new WordPressSettingsRepository()
+		);
+
+		$this->container->set(
 			'validator',
 			static fn (): FormValidator => new FormValidator()
 		);
@@ -59,12 +65,16 @@ class Application {
 
 		$this->container->set(
 			'email_integration',
-			static fn (): EmailIntegrationService => new EmailIntegrationService()
+			fn ( Container $container ): EmailIntegrationService => new EmailIntegrationService(
+				$container->get( 'settings_repository' )
+			)
 		);
 
 		$this->container->set(
 			'webhook_integration',
-			static fn (): WebhookIntegrationService => new WebhookIntegrationService()
+			fn ( Container $container ): WebhookIntegrationService => new WebhookIntegrationService(
+				$container->get( 'settings_repository' )
+			)
 		);
 
 		$this->container->set(
@@ -88,6 +98,13 @@ class Application {
 				);
 			}
 		);
+
+		$this->container->set(
+			'admin_settings_page',
+			fn ( Container $container ): SettingsPage => new SettingsPage(
+				$container->get( 'settings_repository' )
+			)
+		);
 	}
 
 	/**
@@ -109,6 +126,10 @@ class Application {
 				$this->container->get( 'submission_controller' )->register_routes();
 			}
 		);
+
+		if ( is_admin() ) {
+			$this->container->get( 'admin_settings_page' )->register_hooks();
+		}
 
 		register_activation_hook( $this->plugin_file, array( $this, 'on_activate' ) );
 	}
