@@ -21,3 +21,7 @@ Enterprise Gutenberg forms plugin architecture.
 - Prepared statement usage in repository.
 - Transient-based rate limiter to reduce abuse.
 - Admin settings use capability checks and strict sanitization callbacks.
+
+## Deployment Setup
+
+- Configure workflow SSH secrets using [`GITHUB_WORKFLOW_SECRETS.md`](GITHUB_WORKFLOW_SECRETS.md).
