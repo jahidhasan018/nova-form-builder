@@ -100,5 +100,8 @@
 		);
 	}
 
-	wp.element.render( el( App ), document.getElementById( 'nova-form-builder-settings-root' ) );
+	var root = document.getElementById( 'nova-form-builder-settings-root' );
+	if ( root ) {
+		wp.element.render( el( App ), root );
+	}
 } )( window.wp );

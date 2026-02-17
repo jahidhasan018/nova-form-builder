@@ -19,7 +19,7 @@ class FormListPage {
 	}
 
 	public function register_hooks(): void {
-		add_action( 'admin_menu', array( $this, 'register_menu' ) );
+		add_action( 'admin_menu', array( $this, 'register_menu' ), 9 );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 	}
 
@@ -33,10 +33,19 @@ class FormListPage {
 			'dashicons-feedback',
 			58
 		);
+
+		add_submenu_page(
+			self::SLUG,
+			__( 'Add Form', 'nova-form-builder' ),
+			__( 'Add Form', 'nova-form-builder' ),
+			'manage_options',
+			self::SLUG,
+			array( $this, 'render' )
+		);
 	}
 
 	public function enqueue_assets( string $hook_suffix ): void {
-		if ( false === strpos( $hook_suffix, self::SLUG ) ) {
+		if ( 'toplevel_page_' . self::SLUG !== $hook_suffix ) {
 			return;
 		}
 
