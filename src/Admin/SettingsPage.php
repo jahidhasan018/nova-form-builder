@@ -24,19 +24,18 @@ class SettingsPage {
 	}
 
 	public function register_menu(): void {
-		add_menu_page(
-			__( 'NovaForm Builder', 'nova-form-builder' ),
-			__( 'NovaForm Builder', 'nova-form-builder' ),
-			'manage_options',
+		add_submenu_page(
 			self::MENU_SLUG,
-			array( $this, 'render' ),
-			'dashicons-feedback',
-			58
+			__( 'Settings', 'nova-form-builder' ),
+			__( 'Settings', 'nova-form-builder' ),
+			'manage_options',
+			'nova-form-builder-settings',
+			array( $this, 'render' )
 		);
 	}
 
 	public function enqueue_assets( string $hook_suffix ): void {
-		if ( false === strpos( $hook_suffix, self::MENU_SLUG ) ) {
+		if ( false === strpos( $hook_suffix, 'nova-form-builder_page_nova-form-builder-settings' ) ) {
 			return;
 		}
 		wp_enqueue_script( 'nova-form-builder-settings', $this->plugin_url . 'assets/admin/settings.js', array( 'wp-element', 'wp-components', 'wp-api-fetch' ), '1.0.0', true );
@@ -54,6 +53,6 @@ class SettingsPage {
 	}
 
 	public function render(): void {
-		echo '<div class="wrap"><h1>' . esc_html__( 'NovaForm Settings', 'nova-form-builder' ) . '</h1><div id="nova-form-builder-settings-root"></div></div>';
+		echo '<div class="wrap"><h1>' . esc_html__( 'Form Settings', 'nova-form-builder' ) . '</h1><div id="nova-form-builder-settings-root"></div></div>';
 	}
 }
