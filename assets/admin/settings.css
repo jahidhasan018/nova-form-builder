@@ -1,1 +1,38 @@
-.nova-settings-tabs{background:#fff;border:1px solid #dcdcde;padding:16px;margin-bottom:12px}
+.nova-settings-page {
+	max-width: 980px;
+}
+
+.nova-settings-header {
+	background: linear-gradient(135deg, #0f766e, #0ea5a4);
+	color: #fff;
+	border-radius: 12px;
+	padding: 20px;
+	margin-bottom: 16px;
+}
+
+.nova-settings-header h2,
+.nova-settings-header p {
+	margin: 0;
+	color: #fff;
+}
+
+.nova-settings-header p {
+	margin-top: 6px;
+	opacity: .95;
+}
+
+.nova-settings-tabs {
+	background: #fff;
+	border: 1px solid #dbe2ea;
+	border-radius: 12px;
+	padding: 12px;
+	margin-bottom: 12px;
+}
+
+.nova-settings-card {
+	margin-top: 12px;
+	padding: 16px;
+	border: 1px solid #e2e8f0;
+	background: #f8fafc;
+	border-radius: 10px;
+}
