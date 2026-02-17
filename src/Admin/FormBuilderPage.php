@@ -59,12 +59,15 @@ class FormBuilderPage {
 			'1.0.0'
 		);
 
+		$form_id = isset( $_GET['form_id'] ) ? (int) $_GET['form_id'] : 0;
+
 		wp_add_inline_script(
 			'nova-form-builder-admin',
 			'window.NovaFormBuilderAdmin=' . wp_json_encode(
 				array(
-					'root'  => esc_url_raw( rest_url( 'nova-form/v1' ) ),
-					'nonce' => wp_create_nonce( 'wp_rest' ),
+					'root'    => esc_url_raw( rest_url( 'nova-form/v1' ) ),
+					'nonce'   => wp_create_nonce( 'wp_rest' ),
+					'form_id' => $form_id,
 				)
 			) . ';',
 			'before'

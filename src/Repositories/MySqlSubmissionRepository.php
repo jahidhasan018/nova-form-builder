@@ -54,4 +54,28 @@ class MySqlSubmissionRepository implements SubmissionRepositoryInterface {
 
 		return (int) $wpdb->insert_id;
 	}
+
+	public function count_by_form_ids( array $form_ids ): array {
+		global $wpdb;
+
+		$form_ids = array_values( array_filter( array_map( 'intval', $form_ids ) ) );
+		if ( empty( $form_ids ) ) {
+			return array();
+		}
+
+		$in_clause = implode( ',', $form_ids );
+		$sql       = "SELECT CAST(JSON_UNQUOTE(JSON_EXTRACT(payload, '$.form_id')) AS UNSIGNED) AS form_id, COUNT(*) AS total FROM {$this->table_name} WHERE form_type = 'custom' AND CAST(JSON_UNQUOTE(JSON_EXTRACT(payload, '$.form_id')) AS UNSIGNED) IN ({$in_clause}) GROUP BY form_id";
+		$rows      = $wpdb->get_results( $sql, ARRAY_A );
+		$counts    = array();
+
+		if ( is_array( $rows ) ) {
+			foreach ( $rows as $row ) {
+				$id            = isset( $row['form_id'] ) ? (int) $row['form_id'] : 0;
+				$total         = isset( $row['total'] ) ? (int) $row['total'] : 0;
+				$counts[ $id ] = $total;
+			}
+		}
+
+		return $counts;
+	}
 }

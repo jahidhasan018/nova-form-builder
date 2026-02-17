@@ -236,3 +236,30 @@ All submissions are stored in custom table:
 - Number
 - Phone
 
+
+
+## New Admin Workflow
+
+### Add Form submenu
+
+- Go to **NovaForm Builder → Add Form**.
+- You will see a list table with:
+  - Form Name
+  - Form ID
+  - Entries count
+  - Edit / Delete actions
+- Click **Add New Form** to open the React form builder.
+
+### React Form Builder
+
+- Build forms with field controls and reorder support.
+- Edit existing forms by clicking **Edit** from Add Form list.
+- Save and use shortcode or Gutenberg embed block.
+
+### React Settings (tabbed)
+
+- Settings page is now React-based with tabs:
+  - General
+  - Integrations
+  - Styles
+- Choose preset style (`classic`, `modern`, `minimal`) and it is applied on frontend forms automatically.

@@ -28,10 +28,23 @@
 		apiFetch.use( apiFetch.createNonceMiddleware( window.NovaFormBuilderAdmin.nonce ) );
 		apiFetch.use( apiFetch.createRootURLMiddleware( window.NovaFormBuilderAdmin.root.replace( '/nova-form/v1', '/' ) ) );
 
-		useEffect( function () {
+		function loadForms() {
 			apiFetch( { path: '/nova-form/v1/forms' } ).then( function (res) {
-				if ( res && res.data ) { setForms( res.data ); }
+				if ( res && res.data ) {
+					setForms( res.data );
+				}
 			} );
+		}
+
+		useEffect( function () {
+			loadForms();
+			if ( window.NovaFormBuilderAdmin.form_id ) {
+				apiFetch( { path: '/nova-form/v1/forms/' + window.NovaFormBuilderAdmin.form_id } ).then( function (res) {
+					if ( res && res.data ) {
+						setForm( res.data );
+					}
+				} );
+			}
 		}, [] );
 
 		function addField( template ) {
@@ -47,17 +60,12 @@
 		}
 
 		function saveForm() {
-			apiFetch( {
-				path: '/nova-form/v1/forms',
-				method: 'POST',
-				data: form,
-			} ).then( function (res) {
-				setMsg( 'Form saved. Shortcode: [nova_form id="' + res.data.id + '"]' );
-				setForm( Object.assign( {}, form, { id: res.data.id } ) );
-				return apiFetch( { path: '/nova-form/v1/forms' } );
-			} ).then( function (listRes){
-				if ( listRes && listRes.data ) { setForms( listRes.data ); }
-			} );
+			apiFetch( { path: '/nova-form/v1/forms', method: 'POST', data: form } )
+				.then( function (res) {
+					setMsg( 'Form saved. Shortcode: [nova_form id="' + res.data.id + '"]' );
+					setForm( Object.assign( {}, form, { id: res.data.id } ) );
+					loadForms();
+				} );
 		}
 
 		function updateField( index, key, value ) {
@@ -66,59 +74,44 @@
 			setForm( Object.assign( {}, form, { fields: nextFields } ) );
 		}
 
+		function moveField( index, direction ) {
+			var nextFields = form.fields.slice();
+			var target = index + direction;
+			if ( target < 0 || target >= nextFields.length ) { return; }
+			var temp = nextFields[ target ];
+			nextFields[ target ] = nextFields[ index ];
+			nextFields[ index ] = temp;
+			setForm( Object.assign( {}, form, { fields: nextFields } ) );
+		}
+
 		return el( 'div', { className: 'nova-builder' },
 			el( 'div', { className: 'nova-builder__panel' },
 				el( 'h2', null, 'Fields' ),
 				fieldLibrary.map( function (field) {
-					return el( 'div', {
-						key: field.type,
-						className: 'nova-builder__field',
-						onClick: function () { addField( field ); }
-					}, '+ ' + field.label );
+					return el( 'div', { key: field.type, className: 'nova-builder__field', onClick: function () { addField( field ); } }, '+ ' + field.label );
 				} ),
 				el( 'hr' ),
 				el( 'h2', null, 'Forms' ),
 				forms.map( function (saved) {
-					return el( Button, {
-						key: saved.id,
-						variant: 'secondary',
-						onClick: function(){ setForm( saved ); setMsg( '' ); },
-						style: { display: 'block', marginBottom: '8px' }
-					}, saved.name + ' (#' + saved.id + ')' );
+					return el( Button, { key: saved.id, variant: 'secondary', onClick: function(){ setForm( saved ); setMsg( '' ); }, style: { display: 'block', marginBottom: '8px' } }, saved.name + ' (#' + saved.id + ')' );
 				} )
 			),
 			el( 'div', { className: 'nova-builder__canvas' },
-				el( TextControl, {
-					label: 'Form Name',
-					value: form.name,
-					onChange: function ( value ) { setForm( Object.assign( {}, form, { name: value } ) ); }
-				} ),
+				el( TextControl, { label: 'Form Name', value: form.name, onChange: function ( value ) { setForm( Object.assign( {}, form, { name: value } ) ); } } ),
 				form.fields.map( function (field, index) {
 					return el( 'div', { className: 'nova-builder__field', key: field.id },
-						el( 'div', { className: 'nova-builder__row' },
-							el( TextControl, {
-								label: 'Label',
-								value: field.label,
-								onChange: function( value ){ updateField( index, 'label', value ); }
-							} ),
-							el( TextControl, {
-								label: 'Name',
-								value: field.name,
-								onChange: function( value ){ updateField( index, 'name', value ); }
-							} )
+						el( 'strong', null, field.type.toUpperCase() ),
+						el( 'div', { style: { float: 'right' } },
+							el( Button, { isSmall: true, onClick: function(){ moveField(index, -1); } }, '↑' ),
+							el( Button, { isSmall: true, onClick: function(){ moveField(index, 1); } }, '↓' )
 						),
 						el( 'div', { className: 'nova-builder__row' },
-							el( SelectControl, {
-								label: 'Width',
-								value: field.width,
-								options: [ { label: '50%', value: '50' }, { label: '100%', value: '100' } ],
-								onChange: function( value ){ updateField( index, 'width', value ); }
-							} ),
-							el( ToggleControl, {
-								label: 'Required',
-								checked: !! field.required,
-								onChange: function( value ){ updateField( index, 'required', value ); }
-							} )
+							el( TextControl, { label: 'Label', value: field.label, onChange: function( value ){ updateField( index, 'label', value ); } } ),
+							el( TextControl, { label: 'Name', value: field.name, onChange: function( value ){ updateField( index, 'name', value ); } } )
+						),
+						el( 'div', { className: 'nova-builder__row' },
+							el( SelectControl, { label: 'Width', value: field.width, options: [ { label: '50%', value: '50' }, { label: '100%', value: '100' } ], onChange: function( value ){ updateField( index, 'width', value ); } } ),
+							el( ToggleControl, { label: 'Required', checked: !! field.required, onChange: function( value ){ updateField( index, 'required', value ); } } )
 						)
 					);
 				} ),

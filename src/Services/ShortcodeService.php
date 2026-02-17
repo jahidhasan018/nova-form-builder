@@ -10,17 +10,16 @@ declare(strict_types=1);
 namespace NovaFormBuilder\Services;
 
 use NovaFormBuilder\Contracts\FormRepositoryInterface;
+use NovaFormBuilder\Contracts\SettingsRepositoryInterface;
 
 class ShortcodeService {
-	public function __construct( private FormRepositoryInterface $repository ) {}
+	public function __construct( private FormRepositoryInterface $repository, private SettingsRepositoryInterface $settings ) {}
 
 	public function register(): void {
 		add_shortcode( 'nova_form', array( $this, 'render_shortcode' ) );
 	}
 
-	/**
-	 * @param array<string,mixed> $atts Shortcode attributes.
-	 */
+	/** @param array<string,mixed> $atts */
 	public function render_shortcode( array $atts = array() ): string {
 		$form_id = isset( $atts['id'] ) ? (int) $atts['id'] : 0;
 		$form    = $this->repository->find( $form_id );
@@ -28,11 +27,12 @@ class ShortcodeService {
 			return '<p>' . esc_html__( 'Form not found.', 'nova-form-builder' ) . '</p>';
 		}
 
+		$preset   = sanitize_key( (string) $this->settings->get( 'style_preset', 'classic' ) );
 		$endpoint = rest_url( 'nova-form/v1/submit' );
 		$form_dom = 'nova-form-shortcode-' . $form_id . '-' . wp_generate_uuid4();
 		ob_start();
 		?>
-		<form class="nova-form-builder__contact-form" id="<?php echo esc_attr( $form_dom ); ?>" data-endpoint="<?php echo esc_url( $endpoint ); ?>" method="post">
+		<form class="nova-form-builder__contact-form nova-style-<?php echo esc_attr( $preset ); ?>" id="<?php echo esc_attr( $form_dom ); ?>" data-endpoint="<?php echo esc_url( $endpoint ); ?>" method="post">
 			<h3><?php echo esc_html( (string) ( $form['name'] ?? 'Form' ) ); ?></h3>
 			<div class="nova-form-builder__response" role="status" aria-live="polite"></div>
 			<input type="hidden" name="nonce" value="<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ); ?>" />
@@ -41,15 +41,14 @@ class ShortcodeService {
 			<?php foreach ( (array) ( $form['fields'] ?? array() ) as $field ) : ?>
 				<?php $this->render_field( is_array( $field ) ? $field : array() ); ?>
 			<?php endforeach; ?>
+			<div style="clear:both"></div>
 			<button type="submit"><?php esc_html_e( 'Submit', 'nova-form-builder' ); ?></button>
 		</form>
 		<?php
 		return (string) ob_get_clean();
 	}
 
-	/**
-	 * @param array<string,mixed> $field Field config.
-	 */
+	/** @param array<string,mixed> $field */
 	private function render_field( array $field ): void {
 		$type     = sanitize_key( (string) ( $field['type'] ?? 'text' ) );
 		$name     = sanitize_key( (string) ( $field['name'] ?? 'field_' . wp_generate_uuid4() ) );
