@@ -13,6 +13,8 @@ concurrency:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    env:
+      DEPLOY_GITHUB_TOKEN: ${{ secrets.DEPLOY_GITHUB_TOKEN }}
 
     steps:
       - name: Checkout repository
@@ -123,8 +125,8 @@ jobs:
           fi
 
       - name: Configure Composer GitHub auth (optional)
-        if: ${{ secrets.DEPLOY_GITHUB_TOKEN }}
-        run: composer config --global --auth github-oauth.github.com "${{ secrets.DEPLOY_GITHUB_TOKEN }}"
+        if: env.DEPLOY_GITHUB_TOKEN != ''
+        run: composer config --global --auth github-oauth.github.com "$DEPLOY_GITHUB_TOKEN"
 
       - name: Install Composer dependencies
         run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
