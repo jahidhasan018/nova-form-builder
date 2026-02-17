@@ -94,6 +94,20 @@
 			} );
 		}
 
+		function createNewForm() {
+			setMsg( '' );
+			setForm( emptyForm() );
+		}
+
+		function editForm( id ) {
+			setMsg( '' );
+			apiFetch( { path: '/nova-form/v1/forms/' + id } ).then( function (res) {
+				if ( res && res.data ) {
+					setForm( res.data );
+				}
+			} );
+		}
+
 		function remove( id ) {
 			if ( ! window.confirm( 'Delete this form?' ) ) {
 				return;
