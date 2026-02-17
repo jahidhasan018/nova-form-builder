@@ -1,0 +1,124 @@
+name: Build and Deploy Plugin (Hostinger)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-hostinger-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer
+
+      - name: Detect package manifest changes
+        id: package_changes
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          HEAD_SHA="${{ github.sha }}"
+          BASE_SHA="${{ github.event.before }}"
+
+          if [[ -z "$BASE_SHA" || "$BASE_SHA" == "0000000000000000000000000000000000000000" ]]; then
+            BASE_SHA="$(git rev-list --max-count=1 "$HEAD_SHA"^ 2>/dev/null || true)"
+          fi
+
+          if [[ -z "$BASE_SHA" ]]; then
+            echo "No comparable base commit found; forcing package install."
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          CHANGED_FILES="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
+
+          if echo "$CHANGED_FILES" | grep -Eq '^(package.json|package-lock.json|yarn.lock|pnpm-lock.yaml)$'; then
+            echo "Package manifest/lock changes detected."
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No package manifest/lock changes detected."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install Node packages (only when package files changed)
+        if: steps.package_changes.outputs.changed == 'true'
+        run: npm ci
+
+      - name: Skip Node package installation
+        if: steps.package_changes.outputs.changed != 'true'
+        run: echo "Skipping npm install because no package manifest/lock changes were detected."
+
+      - name: Build block assets (if dependencies installed)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -d node_modules ]]; then
+            npm run build
+          else
+            echo "node_modules missing; skipping JS build."
+          fi
+
+      - name: Install Composer dependencies
+        run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
+
+      - name: Prepare deploy artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+
+          rsync -av --delete \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='node_modules' \
+            --exclude='tests' \
+            --exclude='*.md' \
+            --exclude='phpunit.xml' \
+            --exclude='phpcs.xml' \
+            ./ dist/nova-form-builder/
+
+      - name: Prepare remote plugin directory
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USER }}
+          key: ${{ secrets.HOSTINGER_SSH_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          script: |
+            set -e
+            PLUGIN_PATH="${{ secrets.HOSTINGER_PLUGIN_PATH }}"
+
+            mkdir -p "$PLUGIN_PATH"
+            find "$PLUGIN_PATH" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+
+      - name: Upload plugin files to wp-content/plugins
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USER }}
+          key: ${{ secrets.HOSTINGER_SSH_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+          source: dist/nova-form-builder/*
+          target: ${{ secrets.HOSTINGER_PLUGIN_PATH }}
+          strip_components: 2
