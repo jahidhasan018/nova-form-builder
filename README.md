@@ -25,6 +25,7 @@ At a high level:
 - PSR-4 architecture with strict namespace-based OOP structure.
 - Dependency-injection style service wiring using a container.
 - REST endpoint for form submission handling.
+- Frontend async submission flow (no page reload).
 - Custom submissions table (`wp_nova_form_builder_submissions`).
 - Admin dashboard settings page for feature toggles.
 
@@ -115,7 +116,7 @@ On the frontend, users submit the rendered form. The plugin:
 
 ## Current built-in blocks
 
-- `nova-form-builder/contact-form` (implemented)
+- `nova-form-builder/contact-form` (implemented with REST submit + success/error feedback)
 - `nova-form-builder/survey` (placeholder)
 - `nova-form-builder/multi-step-form` (placeholder)
 
@@ -202,3 +203,36 @@ Design patterns used:
 For GitHub Actions SSH deployment setup, see:
 
 - [`GITHUB_WORKFLOW_SECRETS.md`](GITHUB_WORKFLOW_SECRETS.md)
+
+
+## Drag-and-drop Form Builder
+
+NovaForm Builder now includes an admin-side React form builder (WordPress admin):
+
+- Go to **NovaForm Builder → Form Builder**.
+- Click field types to add them to your form canvas.
+- Configure label, field name, width (50%/100%), and required state.
+- Save form and use generated shortcode:
+  - `[nova_form id="123"]`
+
+### Embedding forms
+
+You can embed forms in two ways:
+
+1. **Shortcode**: `[nova_form id="FORM_ID"]`
+2. **Gutenberg block**: `Nova Form Embed` block with selected Form ID
+
+### Submission storage
+
+All submissions are stored in custom table:
+
+- `wp_nova_form_builder_submissions`
+
+### Current supported builder fields
+
+- Text
+- Email
+- Textarea
+- Number
+- Phone
+

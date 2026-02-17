@@ -29,13 +29,25 @@ class ContactFormBlock extends AbstractBlock {
 		$form_title   = isset( $attributes['formTitle'] ) ? sanitize_text_field( (string) $attributes['formTitle'] ) : __( 'Contact Us', 'nova-form-builder' );
 		$submit_label = isset( $attributes['submitLabel'] ) ? sanitize_text_field( (string) $attributes['submitLabel'] ) : __( 'Send Message', 'nova-form-builder' );
 		$form_id      = 'nova-form-' . wp_generate_uuid4();
+		$rest_url     = rest_url( 'nova-form/v1/submit' );
 
 		ob_start();
 		?>
-		<form id="<?php echo esc_attr( $form_id ); ?>" class="nova-form-builder__contact-form" method="post">
+		<form
+			id="<?php echo esc_attr( $form_id ); ?>"
+			class="nova-form-builder__contact-form"
+			method="post"
+			data-endpoint="<?php echo esc_url( $rest_url ); ?>"
+		>
 			<h3><?php echo esc_html( $form_title ); ?></h3>
+			<div class="nova-form-builder__response" role="status" aria-live="polite"></div>
 			<input type="hidden" name="nonce" value="<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ); ?>" />
 			<input type="hidden" name="form_type" value="contact" />
+
+			<p style="display:none !important;">
+				<label for="<?php echo esc_attr( $form_id . '-website' ); ?>"><?php esc_html_e( 'Website', 'nova-form-builder' ); ?></label>
+				<input id="<?php echo esc_attr( $form_id . '-website' ); ?>" name="website" type="text" tabindex="-1" autocomplete="off" />
+			</p>
 
 			<p>
 				<label for="<?php echo esc_attr( $form_id . '-name' ); ?>"><?php esc_html_e( 'Name', 'nova-form-builder' ); ?></label>

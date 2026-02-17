@@ -9,10 +9,10 @@ declare(strict_types=1);
 
 namespace NovaFormBuilder\REST;
 
+use NovaFormBuilder\Contracts\FormRepositoryInterface;
 use NovaFormBuilder\Integrations\EmailIntegrationService;
 use NovaFormBuilder\Integrations\WebhookIntegrationService;
 use NovaFormBuilder\Repositories\SubmissionRepositoryInterface;
-use NovaFormBuilder\Services\FormValidator;
 use NovaFormBuilder\Services\SubmissionHandler;
 use NovaFormBuilder\Support\RateLimiter;
 use WP_Error;
@@ -23,8 +23,8 @@ class SubmissionController {
 	private SubmissionHandler $handler;
 
 	public function __construct(
-		private FormValidator $validator,
 		private SubmissionRepositoryInterface $repository,
+		private FormRepositoryInterface $form_repository,
 		EmailIntegrationService $email_integration,
 		WebhookIntegrationService $webhook_integration,
 		private ?RateLimiter $rate_limiter = null
@@ -77,15 +77,15 @@ class SubmissionController {
 			);
 		}
 
-		$payload    = $this->sanitize_payload( (array) $request->get_json_params() );
-		$validation = $this->validator->validate_submission( $payload );
+		$payload = $this->sanitize_payload( (array) $request->get_json_params() );
+		$errors  = $this->validate_payload( $payload );
 
-		if ( ! $validation['valid'] ) {
+		if ( ! empty( $errors ) ) {
 			return new WP_REST_Response(
 				array(
 					'success' => false,
 					'code'    => 'validation_failed',
-					'errors'  => $validation['errors'],
+					'errors'  => $errors,
 				),
 				422
 			);
@@ -106,16 +106,68 @@ class SubmissionController {
 	}
 
 	/**
+	 * @param array<string,mixed> $payload Payload.
+	 *
+	 * @return array<string,string>
+	 */
+	private function validate_payload( array $payload ): array {
+		$errors  = array();
+		$form_id = isset( $payload['form_id'] ) ? (int) $payload['form_id'] : 0;
+		if ( $form_id <= 0 ) {
+			if ( '' === (string) ( $payload['name'] ?? '' ) ) {
+				$errors['name'] = __( 'Name is required.', 'nova-form-builder' );
+			}
+			if ( ! is_email( (string) ( $payload['email'] ?? '' ) ) ) {
+				$errors['email'] = __( 'A valid email is required.', 'nova-form-builder' );
+			}
+			if ( '' === (string) ( $payload['message'] ?? '' ) ) {
+				$errors['message'] = __( 'Message is required.', 'nova-form-builder' );
+			}
+			return $errors;
+		}
+
+		$form = $this->form_repository->find( $form_id );
+		if ( null === $form ) {
+			$errors['form'] = __( 'Form not found.', 'nova-form-builder' );
+			return $errors;
+		}
+
+		foreach ( (array) ( $form['fields'] ?? array() ) as $field ) {
+			if ( ! is_array( $field ) || empty( $field['required'] ) ) {
+				continue;
+			}
+			$key = sanitize_key( (string) ( $field['name'] ?? '' ) );
+			if ( '' === $key ) {
+				continue;
+			}
+			$value = isset( $payload[ $key ] ) ? (string) $payload[ $key ] : '';
+			if ( '' === $value ) {
+				$errors[ $key ] = sprintf( __( '%s is required.', 'nova-form-builder' ), sanitize_text_field( (string) ( $field['label'] ?? $key ) ) );
+			}
+		}
+
+		return $errors;
+	}
+
+	/**
 	 * @param array<string,mixed> $raw Input payload.
 	 *
 	 * @return array<string,mixed>
 	 */
 	private function sanitize_payload( array $raw ): array {
-		return array(
+		$clean = array(
 			'form_type' => sanitize_key( (string) ( $raw['form_type'] ?? 'contact' ) ),
-			'name'      => sanitize_text_field( (string) ( $raw['name'] ?? '' ) ),
-			'email'     => sanitize_email( (string) ( $raw['email'] ?? '' ) ),
-			'message'   => sanitize_textarea_field( (string) ( $raw['message'] ?? '' ) ),
+			'form_id'   => isset( $raw['form_id'] ) ? (int) $raw['form_id'] : 0,
 		);
+
+		foreach ( $raw as $key => $value ) {
+			$clean_key = sanitize_key( (string) $key );
+			if ( in_array( $clean_key, array( 'nonce', 'website' ), true ) ) {
+				continue;
+			}
+			$clean[ $clean_key ] = is_scalar( $value ) ? sanitize_textarea_field( (string) $value ) : '';
+		}
+
+		return $clean;
 	}
 }

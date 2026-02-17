@@ -21,5 +21,6 @@
   "supports": {
     "html": false
   },
-  "editorScript": "file:./build/index.js"
+  "editorScript": "file:./build/index.js",
+  "viewScript": "file:./build/view.js"
 }
