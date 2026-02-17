@@ -1,0 +1,22 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "nova-form-builder/form-embed",
+  "version": "1.0.0",
+  "title": "Nova Form Embed",
+  "category": "widgets",
+  "icon": "feedback",
+  "description": "Embed a saved NovaForm by ID.",
+  "textdomain": "nova-form-builder",
+  "attributes": {
+    "formId": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "supports": {
+    "html": false
+  },
+  "editorScript": "file:./build/index.js",
+  "viewScript": "file:./build/view.js"
+}

@@ -1,0 +1,10 @@
+.nova-form-builder__contact-form{max-width:760px;padding:16px;border:1px solid #ddd;border-radius:8px;background:#fff}
+.nova-form-builder__contact-form p{margin:0 0 12px}
+.nova-form-builder__contact-form input,.nova-form-builder__contact-form textarea{width:100%;padding:10px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box}
+.nova-form-builder__contact-form button{padding:10px 16px;border:0;border-radius:6px;cursor:pointer}
+.nova-form-builder__contact-form.nova-style-classic button{background:#2271b1;color:#fff}
+.nova-form-builder__contact-form.nova-style-modern{border-color:#d9def5;box-shadow:0 8px 24px rgba(0,0,0,.06)}
+.nova-form-builder__contact-form.nova-style-modern button{background:#5b6ef5;color:#fff}
+.nova-form-builder__contact-form.nova-style-minimal{border-color:#efefef;background:#fafafa}
+.nova-form-builder__contact-form.nova-style-minimal button{background:#111;color:#fff}
+.nova-form-builder__response{margin-bottom:10px;font-size:13px;color:#1d2327}
