@@ -123,7 +123,7 @@ jobs:
           fi
 
       - name: Configure Composer GitHub auth (optional)
-        if: secrets.DEPLOY_GITHUB_TOKEN != ''
+        if: ${{ secrets.DEPLOY_GITHUB_TOKEN }}
         run: composer config --global --auth github-oauth.github.com "${{ secrets.DEPLOY_GITHUB_TOKEN }}"
 
       - name: Install Composer dependencies
