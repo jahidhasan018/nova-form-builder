@@ -23,6 +23,7 @@ use NovaFormBuilder\Repositories\WordPressSettingsRepository;
 use NovaFormBuilder\REST\FormController;
 use NovaFormBuilder\REST\SettingsController;
 use NovaFormBuilder\REST\SubmissionController;
+use NovaFormBuilder\Services\FormSchema;
 use NovaFormBuilder\Services\ShortcodeService;
 
 class Application {
@@ -48,12 +49,13 @@ class Application {
 		$this->container->set( 'email_integration', fn ( Container $c ): EmailIntegrationService => new EmailIntegrationService( $c->get( 'settings_repository' ) ) );
 		$this->container->set( 'webhook_integration', fn ( Container $c ): WebhookIntegrationService => new WebhookIntegrationService( $c->get( 'settings_repository' ) ) );
 		$this->container->set( 'shortcode_service', fn ( Container $c ): ShortcodeService => new ShortcodeService( $c->get( 'form_repository' ), $c->get( 'settings_repository' ) ) );
+		$this->container->set( 'form_schema', static fn (): FormSchema => new FormSchema() );
 
 		$this->container->set(
 			'submission_controller',
-			fn ( Container $c ): SubmissionController => new SubmissionController( $c->get( 'repository' ), $c->get( 'form_repository' ), $c->get( 'email_integration' ), $c->get( 'webhook_integration' ) )
+			fn ( Container $c ): SubmissionController => new SubmissionController( $c->get( 'repository' ), $c->get( 'form_repository' ), $c->get( 'email_integration' ), $c->get( 'webhook_integration' ), null, $c->get( 'form_schema' ) )
 		);
-		$this->container->set( 'form_controller', fn ( Container $c ): FormController => new FormController( $c->get( 'form_repository' ), $c->get( 'repository' ) ) );
+		$this->container->set( 'form_controller', fn ( Container $c ): FormController => new FormController( $c->get( 'form_repository' ), $c->get( 'repository' ), $c->get( 'form_schema' ) ) );
 		$this->container->set( 'settings_controller', fn ( Container $c ): SettingsController => new SettingsController( $c->get( 'settings_repository' ) ) );
 
 		$this->container->set( 'contact_form_block', fn ( Container $c ): ContactFormBlock => new ContactFormBlock( $this->plugin_url(), $this->plugin_path(), $c->get( 'settings_repository' ) ) );
