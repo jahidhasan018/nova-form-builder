@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:
 
 concurrency:
   group: deploy-hostinger-${{ github.ref }}
@@ -27,35 +26,6 @@ jobs:
         with:
           php-version: '8.2'
           tools: composer
-
-      - name: Detect package manifest changes
-        id: package_changes
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          HEAD_SHA="${{ github.sha }}"
-          BASE_SHA="${{ github.event.before }}"
-
-          if [[ -z "$BASE_SHA" || "$BASE_SHA" == "0000000000000000000000000000000000000000" ]]; then
-            BASE_SHA="$(git rev-list --max-count=1 "$HEAD_SHA"^ 2>/dev/null || true)"
-          fi
-
-          if [[ -z "$BASE_SHA" ]]; then
-            echo "No comparable base commit found; forcing package install."
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          CHANGED_FILES="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
-
-          if echo "$CHANGED_FILES" | grep -Eq '^(package.json|package-lock.json|yarn.lock|pnpm-lock.yaml)$'; then
-            echo "Package manifest/lock changes detected."
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "No package manifest/lock changes detected."
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          fi
 
       - name: Detect Node lockfile
         id: node_lock
@@ -90,8 +60,7 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Node packages (only when package files changed)
-        if: steps.package_changes.outputs.changed == 'true'
+      - name: Install Node packages
         shell: bash
         run: |
           set -euo pipefail
@@ -109,20 +78,11 @@ jobs:
             npm install
           fi
 
-      - name: Skip Node package installation
-        if: steps.package_changes.outputs.changed != 'true'
-        run: echo "Skipping package install because no package manifest/lock changes were detected."
-
-      - name: Build block assets (if dependencies installed)
+      - name: Build block assets
         shell: bash
         run: |
           set -euo pipefail
-
-          if [[ -d node_modules ]]; then
-            npm run build
-          else
-            echo "node_modules missing; skipping JS build."
-          fi
+          npm run build
 
       - name: Configure Composer GitHub auth (optional)
         if: env.DEPLOY_GITHUB_TOKEN != ''
