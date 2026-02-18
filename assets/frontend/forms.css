@@ -1,10 +1,144 @@
-.nova-form-builder__contact-form{max-width:760px;padding:16px;border:1px solid #ddd;border-radius:8px;background:#fff}
-.nova-form-builder__contact-form p{margin:0 0 12px}
-.nova-form-builder__contact-form input,.nova-form-builder__contact-form textarea{width:100%;padding:10px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box}
-.nova-form-builder__contact-form button{padding:10px 16px;border:0;border-radius:6px;cursor:pointer}
-.nova-form-builder__contact-form.nova-style-classic button{background:#2271b1;color:#fff}
-.nova-form-builder__contact-form.nova-style-modern{border-color:#d9def5;box-shadow:0 8px 24px rgba(0,0,0,.06)}
-.nova-form-builder__contact-form.nova-style-modern button{background:#5b6ef5;color:#fff}
-.nova-form-builder__contact-form.nova-style-minimal{border-color:#efefef;background:#fafafa}
-.nova-form-builder__contact-form.nova-style-minimal button{background:#111;color:#fff}
-.nova-form-builder__response{margin-bottom:10px;font-size:13px;color:#1d2327}
+.nova-form-builder__contact-form {
+	max-width: 860px;
+	padding: 20px;
+	border: 1px solid #d8dee8;
+	border-radius: 14px;
+	background: #fff;
+	box-shadow: 0 6px 20px rgba(2, 6, 23, 0.04);
+}
+
+.nova-form-builder__title {
+	margin: 0 0 14px;
+	font-size: 1.35rem;
+}
+
+.nova-form-builder__grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 14px;
+}
+
+.nova-form-builder__col-1 { grid-column: span 1; }
+.nova-form-builder__col-2 { grid-column: span 2; }
+.nova-form-builder__col-3 { grid-column: span 3; }
+
+.nova-form-builder__field-wrap {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.nova-form-builder__label {
+	font-weight: 600;
+	font-size: 14px;
+}
+
+.nova-form-builder__contact-form input,
+.nova-form-builder__contact-form textarea,
+.nova-form-builder__contact-form select {
+	width: 100%;
+	padding: 11px 12px;
+	border: 1px solid #c8d1df;
+	border-radius: 10px;
+	box-sizing: border-box;
+	font-size: 14px;
+	transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.nova-form-builder__contact-form input:focus,
+.nova-form-builder__contact-form textarea:focus,
+.nova-form-builder__contact-form select:focus {
+	border-color: #4361ee;
+	outline: 0;
+	box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.18);
+}
+
+.nova-form-builder__choices {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.nova-form-builder__choices label {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.nova-form-builder__help {
+	font-size: 12px;
+	color: #64748b;
+}
+
+.nova-form-builder__field-error {
+	min-height: 16px;
+	font-size: 12px;
+	color: #dc2626;
+}
+
+.nova-form-builder__field-wrap.has-error input,
+.nova-form-builder__field-wrap.has-error textarea,
+.nova-form-builder__field-wrap.has-error select {
+	border-color: #dc2626;
+	box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.12);
+}
+
+.nova-form-builder__submit {
+	margin-top: 16px;
+	padding: 12px 18px;
+	border: 0;
+	border-radius: 10px;
+	cursor: pointer;
+	font-weight: 600;
+}
+
+.nova-form-builder__contact-form.nova-style-classic .nova-form-builder__submit { background:#2271b1;color:#fff; }
+.nova-form-builder__contact-form.nova-style-modern .nova-form-builder__submit { background:#4f46e5;color:#fff; }
+.nova-form-builder__contact-form.nova-style-minimal .nova-form-builder__submit { background:#111827;color:#fff; }
+
+.nova-form-builder__response {
+	margin-bottom: 10px;
+	font-size: 14px;
+	color: #14532d;
+}
+
+.nova-form-builder__response.is-error,
+.nova-form-builder__error-summary {
+	color: #b91c1c;
+}
+
+.nova-form-builder__error-summary {
+	margin-bottom: 10px;
+	font-size: 13px;
+}
+
+.nova-form-builder__static {
+	padding: 8px 10px;
+	border-radius: 10px;
+	background: #f8fafc;
+	border: 1px dashed #d6dee9;
+}
+
+.nova-form-builder__honeypot {
+	position: absolute;
+	left: -9999px;
+	top: auto;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+}
+
+.nova-form-builder__contact-form.is-loading {
+	opacity: .75;
+}
+
+@media (max-width: 860px) {
+	.nova-form-builder__grid {
+		grid-template-columns: 1fr;
+	}
+	.nova-form-builder__col-1,
+	.nova-form-builder__col-2,
+	.nova-form-builder__col-3 {
+		grid-column: span 1;
+	}
+}

@@ -13,6 +13,7 @@ use NovaFormBuilder\Contracts\FormRepositoryInterface;
 use NovaFormBuilder\Integrations\EmailIntegrationService;
 use NovaFormBuilder\Integrations\WebhookIntegrationService;
 use NovaFormBuilder\Repositories\SubmissionRepositoryInterface;
+use NovaFormBuilder\Services\FormSchema;
 use NovaFormBuilder\Services\SubmissionHandler;
 use NovaFormBuilder\Support\RateLimiter;
 use WP_Error;
@@ -27,10 +28,12 @@ class SubmissionController {
 		private FormRepositoryInterface $form_repository,
 		EmailIntegrationService $email_integration,
 		WebhookIntegrationService $webhook_integration,
-		private ?RateLimiter $rate_limiter = null
+		private ?RateLimiter $rate_limiter = null,
+		private ?FormSchema $schema = null
 	) {
 		$this->handler      = new SubmissionHandler( $repository, $email_integration, $webhook_integration );
 		$this->rate_limiter = $this->rate_limiter ?? new RateLimiter();
+		$this->schema       = $this->schema ?? new FormSchema();
 	}
 
 	public function register_routes(): void {
@@ -78,75 +81,69 @@ class SubmissionController {
 		}
 
 		$payload = $this->sanitize_payload( (array) $request->get_json_params() );
-		$errors  = $this->validate_payload( $payload );
+		$form_id = isset( $payload['form_id'] ) ? (int) $payload['form_id'] : 0;
+
+		if ( $form_id <= 0 ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'code'    => 'invalid_form',
+					'message' => __( 'Invalid form submission.', 'nova-form-builder' ),
+					'errors'  => array( 'form_id' => __( 'Form ID is required.', 'nova-form-builder' ) ),
+				),
+				422
+			);
+		}
+
+		$form = $this->form_repository->find( $form_id );
+		if ( null === $form ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'code'    => 'form_not_found',
+					'message' => __( 'The selected form was not found.', 'nova-form-builder' ),
+					'errors'  => array( 'form_id' => __( 'Form not found.', 'nova-form-builder' ) ),
+				),
+				404
+			);
+		}
+
+		$normalized_form = $this->schema->normalize_form( $form );
+		$errors          = $this->schema->validate_submission( $normalized_form, $payload );
 
 		if ( ! empty( $errors ) ) {
 			return new WP_REST_Response(
 				array(
 					'success' => false,
 					'code'    => 'validation_failed',
+					'message' => (string) ( $normalized_form['settings']['error_message'] ?? __( 'Please fix the highlighted fields.', 'nova-form-builder' ) ),
 					'errors'  => $errors,
 				),
 				422
 			);
 		}
 
-		$submission_id = $this->handler->handle( $payload );
+		$submission_payload = $payload;
+		$submission_payload['schema_version'] = (int) ( $normalized_form['schema_version'] ?? FormSchema::SCHEMA_VERSION );
+		$submission_payload['meta']           = array(
+			'form_name'   => sanitize_text_field( (string) ( $normalized_form['name'] ?? '' ) ),
+			'created_at'  => gmdate( 'c' ),
+			'ip_hash'     => md5( $ip . NONCE_SALT ),
+			'user_agent'  => isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( (string) $_SERVER['HTTP_USER_AGENT'] ) ) : '',
+		);
+		$submission_id = $this->handler->handle( $submission_payload );
 
 		return new WP_REST_Response(
 			array(
 				'success' => true,
 				'data'    => array(
 					'submission_id' => $submission_id,
-					'message'       => __( 'Submission received successfully.', 'nova-form-builder' ),
+					'message'       => (string) ( $normalized_form['settings']['success_message'] ?? __( 'Submission received successfully.', 'nova-form-builder' ) ),
+					'redirect_url'  => (string) ( $normalized_form['settings']['redirect_url'] ?? '' ),
 				),
 			),
 			201
 		);
-	}
-
-	/**
-	 * @param array<string,mixed> $payload Payload.
-	 *
-	 * @return array<string,string>
-	 */
-	private function validate_payload( array $payload ): array {
-		$errors  = array();
-		$form_id = isset( $payload['form_id'] ) ? (int) $payload['form_id'] : 0;
-		if ( $form_id <= 0 ) {
-			if ( '' === (string) ( $payload['name'] ?? '' ) ) {
-				$errors['name'] = __( 'Name is required.', 'nova-form-builder' );
-			}
-			if ( ! is_email( (string) ( $payload['email'] ?? '' ) ) ) {
-				$errors['email'] = __( 'A valid email is required.', 'nova-form-builder' );
-			}
-			if ( '' === (string) ( $payload['message'] ?? '' ) ) {
-				$errors['message'] = __( 'Message is required.', 'nova-form-builder' );
-			}
-			return $errors;
-		}
-
-		$form = $this->form_repository->find( $form_id );
-		if ( null === $form ) {
-			$errors['form'] = __( 'Form not found.', 'nova-form-builder' );
-			return $errors;
-		}
-
-		foreach ( (array) ( $form['fields'] ?? array() ) as $field ) {
-			if ( ! is_array( $field ) || empty( $field['required'] ) ) {
-				continue;
-			}
-			$key = sanitize_key( (string) ( $field['name'] ?? '' ) );
-			if ( '' === $key ) {
-				continue;
-			}
-			$value = isset( $payload[ $key ] ) ? (string) $payload[ $key ] : '';
-			if ( '' === $value ) {
-				$errors[ $key ] = sprintf( __( '%s is required.', 'nova-form-builder' ), sanitize_text_field( (string) ( $field['label'] ?? $key ) ) );
-			}
-		}
-
-		return $errors;
 	}
 
 	/**
@@ -156,13 +153,17 @@ class SubmissionController {
 	 */
 	private function sanitize_payload( array $raw ): array {
 		$clean = array(
-			'form_type' => sanitize_key( (string) ( $raw['form_type'] ?? 'contact' ) ),
+			'form_type' => sanitize_key( (string) ( $raw['form_type'] ?? 'custom' ) ),
 			'form_id'   => isset( $raw['form_id'] ) ? (int) $raw['form_id'] : 0,
 		);
 
 		foreach ( $raw as $key => $value ) {
 			$clean_key = sanitize_key( (string) $key );
 			if ( in_array( $clean_key, array( 'nonce', 'website' ), true ) ) {
+				continue;
+			}
+			if ( is_array( $value ) ) {
+				$clean[ $clean_key ] = array_map( static fn ( $item ) => sanitize_text_field( (string) $item ), $value );
 				continue;
 			}
 			$clean[ $clean_key ] = is_scalar( $value ) ? sanitize_textarea_field( (string) $value ) : '';
