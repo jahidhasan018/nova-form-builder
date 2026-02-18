@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace NovaFormBuilder\Services;
 
 class FormSchema {
-	public const SCHEMA_VERSION = 2;
+	public const SCHEMA_VERSION = 3;
 
 	/**
 	 * @return string[]
@@ -43,14 +43,6 @@ class FormSchema {
 	 * @return array<string,mixed>
 	 */
 	public function normalize_form( array $payload ): array {
-		$fields = array();
-		foreach ( (array) ( $payload['fields'] ?? array() ) as $field ) {
-			if ( ! is_array( $field ) ) {
-				continue;
-			}
-			$fields[] = $this->normalize_field( $field );
-		}
-
 		$settings = (array) ( $payload['settings'] ?? array() );
 		$settings = array(
 			'submit_label'    => sanitize_text_field( (string) ( $settings['submit_label'] ?? 'Submit' ) ),
@@ -61,22 +53,123 @@ class FormSchema {
 			'style_preset'    => sanitize_key( (string) ( $settings['style_preset'] ?? 'modern' ) ),
 		);
 
-		$layout = array();
-		foreach ( $fields as $field ) {
-			$layout[] = array(
-				'field'   => $field['name'],
-				'columns' => (int) ( $field['columns'] ?? 1 ),
-			);
-		}
+		// Normalize rows (new column layout system).
+		$rows = $this->normalize_rows( $payload );
+
+		// Flatten fields for validation & backward compat.
+		$fields = $this->flatten_fields_from_rows( $rows );
 
 		return array(
 			'id'             => isset( $payload['id'] ) ? (int) $payload['id'] : 0,
 			'name'           => sanitize_text_field( (string) ( $payload['name'] ?? 'Untitled Form' ) ),
 			'schema_version' => self::SCHEMA_VERSION,
 			'settings'       => $settings,
-			'layout'         => $layout,
+			'rows'           => $rows,
 			'fields'         => $fields,
 		);
+	}
+
+	/**
+	 * Normalize rows from payload. Supports both new row-based and legacy flat fields.
+	 *
+	 * @param array<string,mixed> $payload
+	 * @return array<int,array<string,mixed>>
+	 */
+	private function normalize_rows( array $payload ): array {
+		$raw_rows = (array) ( $payload['rows'] ?? array() );
+
+		// If rows exist, normalize them.
+		if ( ! empty( $raw_rows ) ) {
+			$rows = array();
+			foreach ( $raw_rows as $row ) {
+				if ( ! is_array( $row ) ) {
+					continue;
+				}
+				$rows[] = $this->normalize_row( $row );
+			}
+			return $rows;
+		}
+
+		// Legacy migration: convert flat fields[] into single-column rows.
+		$fields = (array) ( $payload['fields'] ?? array() );
+		if ( empty( $fields ) ) {
+			return array();
+		}
+
+		$rows = array();
+		foreach ( $fields as $field ) {
+			if ( ! is_array( $field ) ) {
+				continue;
+			}
+			$normalized = $this->normalize_field( $field );
+			$rows[] = array(
+				'id'      => 'row_' . wp_generate_uuid4(),
+				'columns' => array(
+					array(
+						'width'  => 100,
+						'fields' => array( $normalized ),
+					),
+				),
+			);
+		}
+		return $rows;
+	}
+
+	/**
+	 * Normalize a single row.
+	 *
+	 * @param array<string,mixed> $row
+	 * @return array<string,mixed>
+	 */
+	private function normalize_row( array $row ): array {
+		$columns = array();
+		$raw_cols = (array) ( $row['columns'] ?? array() );
+
+		foreach ( $raw_cols as $col ) {
+			if ( ! is_array( $col ) ) {
+				continue;
+			}
+			$width  = isset( $col['width'] ) ? (float) $col['width'] : 100;
+			$width  = max( 10, min( 100, $width ) );
+			$fields = array();
+			foreach ( (array) ( $col['fields'] ?? array() ) as $field ) {
+				if ( is_array( $field ) ) {
+					$fields[] = $this->normalize_field( $field );
+				}
+			}
+			$columns[] = array(
+				'width'  => $width,
+				'fields' => $fields,
+			);
+		}
+
+		// Ensure at least one column.
+		if ( empty( $columns ) ) {
+			$columns[] = array( 'width' => 100, 'fields' => array() );
+		}
+
+		return array(
+			'id'      => sanitize_key( (string) ( $row['id'] ?? 'row_' . wp_generate_uuid4() ) ),
+			'columns' => $columns,
+		);
+	}
+
+	/**
+	 * Flatten all fields from the row/column structure.
+	 *
+	 * @param array<int,array<string,mixed>> $rows
+	 * @return array<int,array<string,mixed>>
+	 */
+	private function flatten_fields_from_rows( array $rows ): array {
+		$fields = array();
+		foreach ( $rows as $row ) {
+			foreach ( (array) ( $row['columns'] ?? array() ) as $col ) {
+				foreach ( (array) ( $col['fields'] ?? array() ) as $field ) {
+					$fields[] = $field;
+				}
+			}
+		}
+		return $fields;
 	}
 
 	/**
@@ -97,15 +190,20 @@ class FormSchema {
 
 		$choices = array();
 		foreach ( (array) ( $field['choices'] ?? array() ) as $choice ) {
-			$choice_label = sanitize_text_field( (string) $choice );
-			if ( '' !== $choice_label ) {
-				$choices[] = $choice_label;
+			if ( is_array( $choice ) ) {
+				// Support {label, value} objects.
+				$choice_label = sanitize_text_field( (string) ( $choice['label'] ?? '' ) );
+				$choice_value = sanitize_text_field( (string) ( $choice['value'] ?? $choice_label ) );
+				if ( '' !== $choice_label ) {
+					$choices[] = array( 'label' => $choice_label, 'value' => $choice_value );
+				}
+			} else {
+				// Support plain string choices (backward compat).
+				$choice_label = sanitize_text_field( (string) $choice );
+				if ( '' !== $choice_label ) {
+					$choices[] = array( 'label' => $choice_label, 'value' => $choice_label );
+				}
 			}
-		}
-
-		$columns = (int) ( $field['columns'] ?? 1 );
-		if ( $columns < 1 || $columns > 3 ) {
-			$columns = 1;
 		}
 
 		return array(
@@ -117,7 +215,6 @@ class FormSchema {
 			'help_text'         => sanitize_text_field( (string) ( $field['help_text'] ?? '' ) ),
 			'required'          => ! empty( $field['required'] ),
 			'default_value'     => sanitize_text_field( (string) ( $field['default_value'] ?? '' ) ),
-			'columns'           => $columns,
 			'choices'           => $choices,
 			'accept'            => sanitize_text_field( (string) ( $field['accept'] ?? '' ) ),
 			'max_file_size_kb'  => max( 0, (int) ( $field['max_file_size_kb'] ?? 0 ) ),

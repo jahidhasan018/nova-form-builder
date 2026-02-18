@@ -83,8 +83,8 @@ class Application {
 		} );
 
 		if ( is_admin() ) {
-			$this->container->get( 'admin_settings_page' )->register_hooks();
 			$this->container->get( 'admin_form_list_page' )->register_hooks();
+			$this->container->get( 'admin_settings_page' )->register_hooks();
 		}
 
 		register_activation_hook( $this->plugin_file, array( $this, 'on_activate' ) );

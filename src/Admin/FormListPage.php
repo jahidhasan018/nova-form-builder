@@ -36,8 +36,8 @@ class FormListPage {
 
 		add_submenu_page(
 			self::SLUG,
-			__( 'Add Form', 'nova-form-builder' ),
-			__( 'Add Form', 'nova-form-builder' ),
+			__( 'Forms', 'nova-form-builder' ),
+			__( 'Forms', 'nova-form-builder' ),
 			'manage_options',
 			self::SLUG,
 			array( $this, 'render' )
@@ -50,7 +50,8 @@ class FormListPage {
 		}
 
 		wp_enqueue_script( 'nova-form-builder-forms-list', $this->plugin_url . 'assets/admin/forms-list.js', array( 'wp-element', 'wp-components', 'wp-api-fetch' ), '1.0.0', true );
-		wp_enqueue_style( 'nova-form-builder-admin', $this->plugin_url . 'assets/admin/form-builder.css', array(), '1.0.0' );
+		wp_enqueue_style( 'wp-components' );
+		wp_enqueue_style( 'nova-form-builder-admin', $this->plugin_url . 'assets/admin/form-builder.css', array( 'wp-components' ), '1.0.0' );
 		wp_add_inline_script(
 			'nova-form-builder-forms-list',
 			'window.NovaFormBuilderForms=' . wp_json_encode(
@@ -64,6 +65,6 @@ class FormListPage {
 	}
 
 	public function render(): void {
-		echo '<div class="wrap"><h1>' . esc_html__( 'Add Form', 'nova-form-builder' ) . '</h1><div id="nova-form-builder-forms-root"></div></div>';
+		echo '<div class="wrap"><div id="nova-form-builder-forms-root"></div></div>';
 	}
 }

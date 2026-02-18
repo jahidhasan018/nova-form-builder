@@ -40,6 +40,8 @@ class ShortcodeService {
 		$redirect_url = esc_url_raw( (string) ( $settings['redirect_url'] ?? '' ) );
 		$honeypot     = ! isset( $settings['spam_honeypot'] ) || ! empty( $settings['spam_honeypot'] );
 
+		$rows = (array) ( $form['rows'] ?? array() );
+
 		ob_start();
 		?>
 		<form class="nova-form-builder__contact-form nova-style-<?php echo esc_attr( $preset ); ?>" id="<?php echo esc_attr( $form_dom ); ?>" data-endpoint="<?php echo esc_url( $endpoint ); ?>" data-success-message="<?php echo esc_attr( $success_msg ); ?>" data-error-message="<?php echo esc_attr( $error_msg ); ?>" data-redirect-url="<?php echo esc_url( $redirect_url ); ?>" method="post" novalidate>
@@ -49,9 +51,9 @@ class ShortcodeService {
 			<input type="hidden" name="nonce" value="<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ); ?>" />
 			<input type="hidden" name="form_type" value="custom" />
 			<input type="hidden" name="form_id" value="<?php echo esc_attr( (string) $form_id ); ?>" />
-			<div class="nova-form-builder__grid">
-				<?php foreach ( (array) ( $form['fields'] ?? array() ) as $field ) : ?>
-					<?php $this->render_field( is_array( $field ) ? $field : array() ); ?>
+			<div class="nova-form-builder__rows">
+				<?php foreach ( $rows as $row ) : ?>
+					<?php $this->render_row( is_array( $row ) ? $row : array() ); ?>
 				<?php endforeach; ?>
 			</div>
 			<?php if ( $honeypot ) : ?>
@@ -66,6 +68,31 @@ class ShortcodeService {
 		return (string) ob_get_clean();
 	}
 
+	/** @param array<string,mixed> $row */
+	private function render_row( array $row ): void {
+		$columns = (array) ( $row['columns'] ?? array() );
+		if ( empty( $columns ) ) {
+			return;
+		}
+
+		echo '<div class="nova-form-builder__row">';
+		foreach ( $columns as $col ) {
+			if ( ! is_array( $col ) ) {
+				continue;
+			}
+			$width  = isset( $col['width'] ) ? (float) $col['width'] : 100;
+			$fields = (array) ( $col['fields'] ?? array() );
+			echo '<div class="nova-form-builder__column" style="width:' . esc_attr( $width . '%' ) . ';flex:0 0 ' . esc_attr( $width . '%' ) . ';">';
+			foreach ( $fields as $field ) {
+				if ( is_array( $field ) ) {
+					$this->render_field( $field );
+				}
+			}
+			echo '</div>';
+		}
+		echo '</div>';
+	}
+
 	/** @param array<string,mixed> $field */
 	private function render_field( array $field ): void {
 		$type        = sanitize_key( (string) ( $field['type'] ?? 'text' ) );
@@ -75,20 +102,18 @@ class ShortcodeService {
 		$placeholder = sanitize_text_field( (string) ( $field['placeholder'] ?? '' ) );
 		$help_text   = sanitize_text_field( (string) ( $field['help_text'] ?? '' ) );
 		$default     = sanitize_text_field( (string) ( $field['default_value'] ?? '' ) );
-		$columns     = (int) ( $field['columns'] ?? 1 );
-		$columns     = $columns < 1 || $columns > 3 ? 1 : $columns;
-		$choices     = array_filter( array_map( static fn ( $choice ) => sanitize_text_field( (string) $choice ), (array) ( $field['choices'] ?? array() ) ) );
+		$choices     = (array) ( $field['choices'] ?? array() );
 		$field_id    = 'nova-field-' . esc_attr( $name ) . '-' . wp_rand( 100, 99999 );
 
 		if ( in_array( $type, array( 'html', 'section' ), true ) ) {
-			echo '<div class="nova-form-builder__col nova-form-builder__col-' . esc_attr( (string) $columns ) . '"><div class="nova-form-builder__static">' . wp_kses_post( (string) ( $field['html'] ?? $label ) ) . '</div></div>';
+			echo '<div class="nova-form-builder__field-block"><div class="nova-form-builder__static">' . wp_kses_post( (string) ( $field['html'] ?? $label ) ) . '</div></div>';
 			return;
 		}
 		?>
-		<div class="nova-form-builder__col nova-form-builder__col-<?php echo esc_attr( (string) $columns ); ?>" data-field-key="<?php echo esc_attr( $name ); ?>">
+		<div class="nova-form-builder__field-block" data-field-key="<?php echo esc_attr( $name ); ?>">
 			<div class="nova-form-builder__field-wrap">
 				<?php if ( 'hidden' !== $type ) : ?>
-					<label for="<?php echo esc_attr( $field_id ); ?>" class="nova-form-builder__label"><?php echo esc_html( $label ); ?><?php echo $required ? ' *' : ''; ?></label>
+					<label for="<?php echo esc_attr( $field_id ); ?>" class="nova-form-builder__label"><?php echo esc_html( $label ); ?><?php echo $required ? ' <span class="nova-form-builder__required">*</span>' : ''; ?></label>
 				<?php endif; ?>
 				<?php $this->render_input_by_type( $type, $name, $field_id, $required, $placeholder, $default, $choices, $field ); ?>
 				<?php if ( '' !== $help_text ) : ?>
@@ -101,7 +126,7 @@ class ShortcodeService {
 	}
 
 	/**
-	 * @param string[] $choices
+	 * @param array<int,array<string,string>> $choices
 	 * @param array<string,mixed> $field
 	 */
 	private function render_input_by_type( string $type, string $name, string $field_id, bool $required, string $placeholder, string $default, array $choices, array $field ): void {
@@ -113,20 +138,26 @@ class ShortcodeService {
 		if ( in_array( $type, array( 'select', 'radio', 'checkbox-group' ), true ) ) {
 			if ( 'select' === $type ) {
 				echo '<select id="' . esc_attr( $field_id ) . '" name="' . esc_attr( $name ) . '" ' . $required_attr . '>';
-				echo '<option value="">' . esc_html__( 'Select an option', 'nova-form-builder' ) . '</option>';
+				$ph = $placeholder ?: esc_html__( 'Select an option', 'nova-form-builder' );
+				echo '<option value="">' . esc_html( $ph ) . '</option>';
 				foreach ( $choices as $choice ) {
-					echo '<option value="' . esc_attr( $choice ) . '">' . esc_html( $choice ) . '</option>';
+					$ch_label = is_array( $choice ) ? (string) ( $choice['label'] ?? '' ) : (string) $choice;
+					$ch_value = is_array( $choice ) ? (string) ( $choice['value'] ?? $ch_label ) : $ch_label;
+					$selected = ( $default === $ch_value ) ? ' selected' : '';
+					echo '<option value="' . esc_attr( $ch_value ) . '"' . $selected . '>' . esc_html( $ch_label ) . '</option>';
 				}
 				echo '</select>';
 				return;
 			}
 			echo '<div class="nova-form-builder__choices">';
 			foreach ( $choices as $index => $choice ) {
+				$ch_label = is_array( $choice ) ? (string) ( $choice['label'] ?? '' ) : (string) $choice;
+				$ch_value = is_array( $choice ) ? (string) ( $choice['value'] ?? $ch_label ) : $ch_label;
 				$id = $field_id . '-' . $index;
 				if ( 'radio' === $type ) {
-					echo '<label><input type="radio" id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '" value="' . esc_attr( $choice ) . '" ' . $required_attr . ' /> ' . esc_html( $choice ) . '</label>';
+					echo '<label><input type="radio" id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '" value="' . esc_attr( $ch_value ) . '" ' . $required_attr . ' /> ' . esc_html( $ch_label ) . '</label>';
 				} else {
-					echo '<label><input type="checkbox" id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '[]" value="' . esc_attr( $choice ) . '" /> ' . esc_html( $choice ) . '</label>';
+					echo '<label><input type="checkbox" id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '[]" value="' . esc_attr( $ch_value ) . '" /> ' . esc_html( $ch_label ) . '</label>';
 				}
 			}
 			echo '</div>';
