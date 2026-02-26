@@ -1,6 +1,6 @@
 # NovaForm Builder
 
-NovaForm Builder is an enterprise-oriented WordPress plugin for building Gutenberg-powered forms with secure REST submission handling, repository-based persistence, and extensible service architecture.
+NovaForm Builder is an enterprise-oriented WordPress plugin for building forms with secure REST submission handling, repository-based persistence, and extensible service architecture.
 
 ## What this plugin does
 
